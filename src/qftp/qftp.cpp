@@ -869,7 +869,7 @@ void QFtpPI::abort()
 #endif
     commandSocket.write("ABOR\r\n", 6);
 
-    if (currentCmd.startsWith(QLatin1String("STOR ")))
+    if (currentCmd.startsWith(QLatin1String("STOR ")) || currentCmd.startsWith(QLatin1String("APPE ")))
         dtp.abortConnection();
 }
 
@@ -1101,7 +1101,7 @@ bool QFtpPI::processReply()
         // 213 File status.
         if (currentCmd.startsWith(QLatin1String("SIZE ")))
             dtp.setBytesTotal(replyText.simplified().toLongLong());
-    } else if (replyCode[0]==1 && currentCmd.startsWith(QLatin1String("STOR "))) {
+    } else if (replyCode[0]==1 && (currentCmd.startsWith(QLatin1String("STOR ")) || currentCmd.startsWith(QLatin1String("APPE ")))) {
         dtp.waitForConnection();
         dtp.writeData();
     }
@@ -1851,7 +1851,7 @@ int QFtp::get(const QString &file, QIODevice *dev, TransferType type)
 
     \sa dataTransferProgress() commandStarted() commandFinished()
 */
-int QFtp::put(const QByteArray &data, const QString &file, TransferType type)
+int QFtp::put(const QByteArray &data, const QString &file, TransferType type, bool append)
 {
     QStringList cmds;
     if (type == Binary)
@@ -1860,7 +1860,7 @@ int QFtp::put(const QByteArray &data, const QString &file, TransferType type)
         cmds << QLatin1String("TYPE A\r\n");
     cmds << QLatin1String(d->transferMode == Passive ? "PASV\r\n" : "PORT\r\n");
     cmds << QLatin1String("ALLO ") + QString::number(data.size()) + QLatin1String("\r\n");
-    cmds << QLatin1String("STOR ") + file + QLatin1String("\r\n");
+    cmds << (append ? QLatin1String("APPE ") : QLatin1String("STOR ")) + file + QLatin1String("\r\n");
     return d->addCommand(new QFtpCommand(Put, cmds, data));
 }
 
@@ -1878,7 +1878,7 @@ int QFtp::put(const QByteArray &data, const QString &file, TransferType type)
     operation (it is safe to delete it when the commandFinished() is
     emitted).
 */
-int QFtp::put(QIODevice *dev, const QString &file, TransferType type)
+int QFtp::put(QIODevice *dev, const QString &file, TransferType type, bool append)
 {
     QStringList cmds;
     if (type == Binary)
@@ -1888,7 +1888,7 @@ int QFtp::put(QIODevice *dev, const QString &file, TransferType type)
     cmds << QLatin1String(d->transferMode == Passive ? "PASV\r\n" : "PORT\r\n");
     if (!dev->isSequential())
         cmds << QLatin1String("ALLO ") + QString::number(dev->size()) + QLatin1String("\r\n");
-    cmds << QLatin1String("STOR ") + file + QLatin1String("\r\n");
+    cmds << (append ? QLatin1String("APPE ") : QLatin1String("STOR ")) + file + QLatin1String("\r\n");
     return d->addCommand(new QFtpCommand(Put, cmds, dev));
 }
 
